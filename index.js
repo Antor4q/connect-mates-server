@@ -30,6 +30,11 @@ async function run() {
 
     const assignmentsCollection = client.db("assignmentsDB").collection("assignments")
 
+    app.get("/createAssignment", async(req,res) => {
+      const result = await assignmentsCollection.find().toArray()
+      res.send(result)
+    })
+
     app.post("/createAssignment", async(req,res) => {
         const query = req.body;
         const result = await assignmentsCollection.insertOne(query)
