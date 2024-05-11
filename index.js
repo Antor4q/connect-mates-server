@@ -29,6 +29,7 @@ async function run() {
     await client.connect();
 
     const assignmentsCollection = client.db("assignmentsDB").collection("assignments")
+    const attemptedCollection = client.db("assignmentsDB").collection("attemptedAssign")
 
     app.get("/createAssignment", async(req,res) => {
       const result = await assignmentsCollection.find().toArray()
@@ -71,6 +72,13 @@ async function run() {
       const id = req.params.id
       const query = { _id : new ObjectId(id)}
       const result = await assignmentsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // attempted assignments
+    app.post("/attempted", async(req,res) => {
+      const query = req.body;
+      const result = await attemptedCollection.insertOne(query)
       res.send(result)
     })
 
