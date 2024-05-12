@@ -31,6 +31,13 @@ async function run() {
     const assignmentsCollection = client.db("assignmentsDB").collection("assignments")
     const attemptedCollection = client.db("assignmentsDB").collection("attemptedAssign")
 
+    // authentication api
+    // app.post("/jwt",async(req,res)=>{
+    //   const user = req.body
+    //   const 
+    // })
+
+    // assignments api
     app.get("/createAssignment", async(req,res) => {
       const result = await assignmentsCollection.find().toArray()
       res.send(result)
@@ -82,9 +89,31 @@ async function run() {
       res.send(result)
     })
 
+    app.get("/pending", async(req,res) => {
+      const result = await attemptedCollection.find().toArray()
+      res.send(result)
+    })
+
     app.get("/attempted/:email", async(req,res)=>{
       const cursor = req.params.email
       const result = await attemptedCollection.find({ email : cursor}).toArray()
+      res.send(result)
+    })
+
+    app.put("/markAssign/:id", async(req,res)=> {
+      const id = req.params.id
+      const filter = {_id : new ObjectId(id)}
+      const options = { upsert : true}
+      const marked = req.body;
+     
+      const doc = {
+        $set : {
+          status : marked.status,
+          giveMark : marked.giveMark,
+          feedback : marked.feedback
+        }
+      }
+      const result = await attemptedCollection.updateOne(filter, doc, options)
       res.send(result)
     })
 
