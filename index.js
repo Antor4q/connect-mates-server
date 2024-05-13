@@ -1,5 +1,7 @@
 const express = require("express")
 const cors = require("cors")
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 const app = express()
 require("dotenv").config()
 const port = process.env.PORT || 5000;
@@ -7,8 +9,12 @@ const port = process.env.PORT || 5000;
 // 
 // 
 
-app.use(cors())
+app.use(cors({
+  origin : ["http://localhost:5173"],
+  credentials: true
+}))
 app.use(express.json())
+app.use(cookieParser())
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -23,6 +29,21 @@ const client = new MongoClient(uri, {
   }
 });
 
+const verifyToken  = (req,res,next) => {
+  const token = req?.cookies?.accToken
+  if(!token){
+    return res.status(401).send({message:"Unauthorized Access"})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN, (err,decoded) => {
+    if(err){
+      return res.status(401).send({message:"Unauthorized Access"})
+    }
+    req.user = decoded
+    next()
+  })
+ 
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -32,10 +53,25 @@ async function run() {
     const attemptedCollection = client.db("assignmentsDB").collection("attemptedAssign")
 
     // authentication api
-    // app.post("/jwt",async(req,res)=>{
-    //   const user = req.body
-    //   const 
-    // })
+    app.post("/jwt",async(req,res)=>{
+      const userEmail = req.body
+      const token = jwt.sign(userEmail, process.env.ACCESS_TOKEN,{expiresIn : '12h'})
+      res
+      .cookie("accToken",token, {
+        httpOnly : true,
+        secure : true,
+        sameSite: "none"
+      })
+      .send({success : true})
+    })
+
+    app.post("/signOut", async(req,res) => {
+      const userEmail = req.body;
+      console.log(userEmail)
+      res
+      .clearCookie("accToken",{maxAge : 0,sameSite:"none",secure: true})
+      .send({success : true})
+    })
 
     // assignments api
     app.get("/createAssignment", async(req,res) => {
@@ -43,20 +79,20 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/updateAssignment/:id", async(req,res) => {
+    app.get("/updateAssignment/:id",verifyToken, async(req,res) => {
       const id = req.params.id
       const query = { _id : new ObjectId(id)}
       const result = await assignmentsCollection.findOne(query)
       res.send(result)
     })
 
-    app.post("/createAssignment", async(req,res) => {
+    app.post("/createAssignment",verifyToken, async(req,res) => {
         const query = req.body;
         const result = await assignmentsCollection.insertOne(query)
         res.send(result)
     })
 
-    app.patch("/updateAssignment/:id", async(req,res) => {
+    app.patch("/updateAssignment/:id",verifyToken, async(req,res) => {
       const id = req.params.id
       const query = { _id : new ObjectId(id)}
       const options = { upsert: true }
@@ -89,17 +125,22 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/pending", async(req,res) => {
+    app.get("/pending",verifyToken, async(req,res) => {
+    
       const result = await attemptedCollection.find().toArray()
       res.send(result)
     })
 
-    app.get("/attempted/:email", async(req,res)=>{
+    app.get("/attempted/:email",verifyToken, async(req,res)=>{
+     
+      if(req?.params?.email !== req.user.email){
+        return res.status(403).send({message: "Invalid Access"})
+      }
       const cursor = req.params.email
       const result = await attemptedCollection.find({ email : cursor}).toArray()
       res.send(result)
     })
-
+ 
     app.put("/markAssign/:id", async(req,res)=> {
       const id = req.params.id
       const filter = {_id : new ObjectId(id)}
