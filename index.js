@@ -51,7 +51,7 @@ async function run() {
 
     const assignmentsCollection = client.db("assignmentsDB").collection("assignments")
     const attemptedCollection = client.db("assignmentsDB").collection("attemptedAssign")
-
+    // https://connect-mates-server.vercel.app
     // authentication api
     app.post("/jwt",async(req,res)=>{
       const userEmail = req.body
