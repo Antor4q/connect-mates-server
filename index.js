@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 // 
 
 app.use(cors({
-  origin : ["http://localhost:5173"],
+  origin : ["http://localhost:5173","https://connect-mates.web.app","https://connect-mates.firebaseapp.com"],
   credentials: true
 }))
 app.use(express.json())
@@ -47,7 +47,7 @@ const verifyToken  = (req,res,next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const assignmentsCollection = client.db("assignmentsDB").collection("assignments")
     const attemptedCollection = client.db("assignmentsDB").collection("attemptedAssign")
@@ -59,8 +59,8 @@ async function run() {
       res
       .cookie("accToken",token, {
         httpOnly : true,
-        secure : true,
-        sameSite: "none"
+        secure : process.env.NODE_ENV === "production" ? true : false,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict"
       })
       .send({success : true})
     })
@@ -69,7 +69,7 @@ async function run() {
       const userEmail = req.body;
       console.log(userEmail)
       res
-      .clearCookie("accToken",{maxAge : 0,sameSite:"none",secure: true})
+      .clearCookie("accToken",{maxAge : 0,sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",secure: process.env.NODE_ENV === "production" ? true : false})
       .send({success : true})
     })
 
@@ -117,7 +117,6 @@ async function run() {
       const result = await assignmentsCollection.deleteOne(query)
       res.send(result)
     })
-
     // attempted assignments
     app.post("/attempted", async(req,res) => {
       const query = req.body;
@@ -159,7 +158,7 @@ async function run() {
     })
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
@@ -167,7 +166,7 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
+ 
 
 app.get("/",(req,res) => {
     res.send("Connect Mates is Running")
